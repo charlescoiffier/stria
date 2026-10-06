@@ -1,0 +1,31 @@
+# Intégration continue : tests puis build, sur chaque push et chaque pull request.
+# Le dossier construit est conservé une semaine comme artefact du run, pour essayer une branche.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stria-${{ github.ref_name }}
+          path: dist
+          retention-days: 7
