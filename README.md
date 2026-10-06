@@ -6,8 +6,10 @@ Une application web qui transforme une image en une trame de **lignes noires par
 des lignes est constant, et c'est leur **épaisseur** qui traduit la luminosité de l'image, comme dans une gravure.
 De près, on voit une trame régulière ; à distance, l'image réapparaît.
 
+**Essayer l'application : https://charlescoiffier.github.io/stria/**
+
 Aucune installation : tout se passe dans le navigateur, et rien n'est envoyé à un serveur.
-Téléchargez [`index.html`](index.html) et ouvrez-le (double-clic), ou lancez-le comme indiqué plus bas.
+Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-clic) : il fonctionne hors ligne.
 
 ---
 
@@ -104,8 +106,12 @@ du navigateur (`STRIA SELFTEST`).
 Pour ajouter un texte à l'interface, ajoutez sa clé dans **les deux** dictionnaires `fr` et `en` de `I18N`, puis
 référencez-la avec `data-i18n="clé"` (ou `T('clé')` en JavaScript) : un test échoue si une traduction manque.
 
-## Intégration continue
+## Intégration continue et déploiement
 
 Le workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) s'exécute à chaque push et à chaque pull request :
-il lance `npm test`, puis `npm run build`. Le dossier `dist/` est conservé une semaine comme artefact du run, ce qui
-permet d'essayer une branche sans rien publier. Un badge en tête de ce README reflète l'état du dernier run.
+il lance `npm test`, puis `npm run build`. Un badge en tête de ce README reflète l'état du dernier run.
+
+- Hors `main` (branches, pull requests), `dist/` est conservé une semaine comme artefact du run, ce qui permet
+  d'essayer une branche sans rien publier.
+- Sur un push vers `main`, si les tests et le build passent, `dist/` est publié sur GitHub Pages :
+  <https://charlescoiffier.github.io/stria/>. La page est donc toujours à jour avec `main`.

@@ -1,5 +1,8 @@
-# Intégration continue : tests puis build, sur chaque push et chaque pull request.
-# Le dossier construit est conservé une semaine comme artefact du run, pour essayer une branche.
+# Intégration continue et déploiement sur GitHub Pages.
+#  - build  : tests puis construction, sur chaque push et chaque pull request (le dossier construit est conservé
+#             une semaine comme artefact du run, pour essayer une branche sans toucher à la production) ;
+#  - deploy : sur un push vers main uniquement, publie le résultat sur GitHub Pages
+#             (https://charlescoiffier.github.io/stria/).
 name: CI
 
 on:
@@ -24,8 +27,32 @@ jobs:
           node-version: 22
       - run: npm test
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - name: Artefact de la branche (essai sans toucher à la production)
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
         with:
           name: stria-${{ github.ref_name }}
           path: dist
           retention-days: 7
+      - name: Préparer GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/configure-pages@v5
+      - name: Envoyer le site
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
