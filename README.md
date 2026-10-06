@@ -11,6 +11,8 @@ De près, on voit une trame régulière ; à distance, l'image réapparaît.
 Aucune installation : tout se passe dans le navigateur, et rien n'est envoyé à un serveur.
 Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-clic) : il fonctionne hors ligne.
 
+![Stria : l'image de démonstration convertie en trame de lignes, avec le panneau de réglages à gauche](docs/images/stria.png)
+
 ---
 
 # Pour les utilisateurs
