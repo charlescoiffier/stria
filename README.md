@@ -1,3 +1,6 @@
+> [!WARNING]
+> Ce projet a été vibecodé avec l’aide de l’intelligence artificielle.
+
 # Stria
 
 [![CI](https://github.com/charlescoiffier/stria/actions/workflows/ci.yml/badge.svg)](https://github.com/charlescoiffier/stria/actions/workflows/ci.yml)
