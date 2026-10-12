@@ -35,6 +35,8 @@
   button:hover, .btn:hover { background:#353943; }
   button.primary { background:#e9e9ea; color:#111; border-color:#e9e9ea; }
   .btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  select { width:100%; background:#14151a; color:var(--fg); border:1px solid #3a3e47; border-radius:5px; padding:5px 7px; font:inherit; margin-top:3px; }
+  .row[hidden] { display:none; }
   input[type=number] { width:100%; background:#14151a; color:var(--fg); border:1px solid #3a3e47; border-radius:5px; padding:5px 7px; }
   main { position:relative; display:flex; align-items:center; justify-content:center; padding:20px; min-width:0; min-height:0; overflow:hidden; }
   #stage { background:#fff; max-width:100%; max-height:100%; box-shadow:0 6px 40px #0008; }
@@ -54,6 +56,18 @@
     <label class="btn" for="file" data-i18n="load">Charger une image…</label>
     <input id="file" type="file" accept="image/*" hidden>
     <div class="sep"></div>
+    <div class="row"><label><span data-i18n="style">Style de trame</span></label>
+      <select id="style">
+        <option value="lines" data-i18n="st_lines">Lignes parallèles</option>
+        <option value="dots" data-i18n="st_dots">Points (trame régulière)</option>
+        <option value="stochastic" data-i18n="st_stochastic">Points (trame stochastique)</option>
+        <option value="hatch" data-i18n="st_hatch">Hachures croisées</option>
+      </select></div>
+    <div class="row" id="layoutRow"><label><span data-i18n="layout">Disposition des points</span></label>
+      <select id="layout">
+        <option value="square" data-i18n="lay_square">Carrée</option>
+        <option value="hex" data-i18n="lay_hex">En quinconce</option>
+      </select></div>
     <div id="sliders"></div>
     <div class="sep"></div>
     <label class="chk"><input type="checkbox" id="invert"> <span data-i18n="invert">Inversion (clair → épais)</span></label>
@@ -165,7 +179,7 @@ function clipRange(o, d, lo, hi, rng) {
 
 /*
  * Construit les rubans. `cov` = carte de couverture (0 = blanc, 1 = noir), W×H.
- * P : { spacing, angle(deg), wmin, wmax, cut (px), step (px), smooth (échantillons), tol (px) }
+ * P : { spacing, angle(deg), wmin, wmax (ou mapW : couverture → épaisseur px), cut (px), step (px), smooth (échantillons), tol (px) }
  * Retour : [{ k, pts: Float32Array [x0,y0,x1,y1,…] }]  (polygone fermé : bord +, puis bord − inversé)
  */
 function buildRibbons(cov, W, H, P) {
@@ -195,13 +209,14 @@ function buildRibbons(cov, W, H, P) {
       w[i] = c / twSum;
     }
     const ws = smooth1D(w, P.smooth);
-    for (let i = 0; i < n; i++) ws[i] = P.wmin + (P.wmax - P.wmin) * clamp(ws[i], 0, 1);
-    // tronçons où l'épaisseur dépasse le seuil de coupure
+    for (let i = 0; i < n; i++) ws[i] = P.mapW ? P.mapW(clamp(ws[i], 0, 1)) : P.wmin + (P.wmax - P.wmin) * clamp(ws[i], 0, 1);
+    // tronçons où l'épaisseur dépasse le seuil de coupure (jamais de ruban d'épaisseur nulle)
+    const cut = Math.max(P.cut, 1e-3);
     let i = 0;
     while (i < n) {
-      while (i < n && ws[i] < P.cut) i++;
+      while (i < n && ws[i] < cut) i++;
       let j = i;
-      while (j < n && ws[j] >= P.cut) j++;
+      while (j < n && ws[j] >= cut) j++;
       if (j - i >= 2) {
         const idx = simplifyProfile(s, ws, i, j - 1, P.tol), m = idx.length;
         const pts = new Float32Array(4 * m);
@@ -220,13 +235,144 @@ function buildRibbons(cov, W, H, P) {
   return out;
 }
 
+/* ---------- Styles de trame supplémentaires ---------- */
+
+// PRNG déterministe : une même graine redonne exactement le même semis de points.
+function mulberry32(a) {
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/*
+ * Trame de points (demi-teinte AM) : points sur un réseau régulier tourné de `angle`, diamètre variable.
+ * P : { spacing, angle(deg), layout: 'square' | 'hex' (quinconce), dmin, dmax (px, diamètres), cut (px, diamètre minimal tracé) }
+ * Le diamètre suit la racine de la couverture : la surface encrée est proportionnelle à la tonalité.
+ * Retour : Float32Array [x0, y0, r0, x1, y1, r1, …]
+ */
+function buildDots(cov, W, H, P) {
+  const p = P.spacing, th = P.angle * Math.PI / 180;
+  const dx = Math.cos(th), dy = Math.sin(th), nx = -dy, ny = dx;
+  const hex = P.layout === 'hex', rowStep = hex ? p * Math.sqrt(3) / 2 : p;
+  const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2 + p;
+  const jm = Math.ceil(R / rowStep), im = Math.ceil(R / p) + 1, minD = Math.max(P.cut, 0.05);
+  const out = [];
+  for (let j = -jm; j <= jm; j++) {
+    const off = hex && (j & 1) ? p / 2 : 0;
+    for (let i = -im; i <= im; i++) {
+      const u = i * p + off, v = j * rowStep;
+      const x = cx + dx * u + nx * v, y = cy + dy * u + ny * v;
+      if (x < -p || x > W + p || y < -p || y > H + p) continue;
+      const t = clamp(sampleBilinear(cov, W, H, x, y), 0, 1);
+      const d = P.dmin + (P.dmax - P.dmin) * Math.sqrt(t);
+      if (d < minD) continue;
+      const r = d / 2;
+      if (x < -r || x > W + r || y < -r || y > H + r) continue;
+      out.push(x, y, r);
+    }
+  }
+  return Float32Array.from(out);
+}
+
+/*
+ * Trame stochastique : points de même diamètre, densité proportionnelle à la couverture.
+ * Disques de Poisson à rayon variable (Bridson) : la distance minimale entre points vaut K·d/√couverture,
+ * de sorte que le nombre de points par unité de surface suit la tonalité (bruit bleu, sans alignement).
+ * P : { dot (px, diamètre), cut (couverture minimale 0..1), seed, maxPoints }
+ * Retour : Float32Array [x, y, r, …]
+ */
+function stochasticDots(cov, W, H, P) {
+  const d = P.dot, K = 0.7, cut = Math.max(P.cut, 0.005), rnd = mulberry32(P.seed | 0);
+  const maxN = P.maxPoints || 400000, rmin = d * K, cs = rmin / Math.SQRT2;
+  const gw = Math.ceil(W / cs) + 1, gh = Math.ceil(H / cs) + 1;
+  const grid = new Int32Array(gw * gh).fill(-1);     // un point au plus par cellule (diagonale = rmin)
+  const xs = [], ys = [], act = [];
+  const dens = (x, y) => Math.min(1, sampleBilinear(cov, W, H, x, y));
+  const rad = c => rmin / Math.sqrt(c);
+  const free = (x, y, r) => {
+    const gx = (x / cs) | 0, gy = (y / cs) | 0, R = Math.ceil(r / cs), r2 = r * r;
+    for (let j = Math.max(0, gy - R); j <= Math.min(gh - 1, gy + R); j++) {
+      for (let i = Math.max(0, gx - R); i <= Math.min(gw - 1, gx + R); i++) {
+        const id = grid[j * gw + i];
+        if (id >= 0) { const ex = xs[id] - x, ey = ys[id] - y; if (ex * ex + ey * ey < r2) return false; }
+      }
+    }
+    return true;
+  };
+  const add = (x, y) => {
+    const id = xs.length; xs.push(x); ys.push(y); act.push(id);
+    grid[((y / cs) | 0) * gw + ((x / cs) | 0)] = id;
+  };
+  // Germes répartis dans toute l'image (les zones sombres séparées par du blanc ne se rejoignent pas toutes seules).
+  for (let n = 0; n < 4000; n++) {
+    const x = rnd() * W, y = rnd() * H, c = dens(x, y);
+    if (c >= cut && rnd() <= c && free(x, y, rad(c))) add(x, y);
+  }
+  while (act.length && xs.length < maxN) {
+    const ai = (rnd() * act.length) | 0, id = act[ai], px = xs[id], py = ys[id];
+    const rp = rad(Math.max(dens(px, py), cut));
+    let found = false;
+    for (let k = 0; k < 20; k++) {
+      const a = rnd() * 2 * Math.PI, rr = rp * (1 + rnd());
+      const x = px + Math.cos(a) * rr, y = py + Math.sin(a) * rr;
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const c = dens(x, y);
+      if (c < cut) continue;
+      if (free(x, y, rad(c))) { add(x, y); found = true; }
+    }
+    if (!found) { act[ai] = act[act.length - 1]; act.pop(); }
+  }
+  const out = new Float32Array(xs.length * 3);
+  for (let i = 0; i < xs.length; i++) { out[3 * i] = xs[i]; out[3 * i + 1] = ys[i]; out[3 * i + 2] = d / 2; }
+  return out;
+}
+
+/*
+ * Hachures croisées : `n` passes de lignes parallèles, d'angles répartis sur 180°, ajoutées l'une après l'autre.
+ * La passe i prend en charge la part de tonalité que les précédentes (saturées à `amax`) n'ont pas couverte :
+ * avec des recouvrements indépendants, la couverture totale vaut 1 − Π(1 − aᵢ) et reproduit donc la tonalité.
+ * Retourne la couverture (0..1) de chaque passe pour une tonalité c.
+ */
+function hatchCoverages(c, n, amax) {
+  const a = new Array(n);
+  let keep = 1;                                      // part de blanc restant après les passes déjà posées
+  for (let i = 0; i < n; i++) {
+    a[i] = clamp(1 - (1 - c) / keep, 0, amax);
+    keep *= 1 - a[i];
+  }
+  return a;
+}
+
+// Angles (relatifs) des passes : 2 → 0/90, 3 → 0/60/120, 4 → 0/90/45/135 (les plus contrastés d'abord).
+function hatchAngles(n) {
+  const order = n === 4 ? [0, 2, 1, 3] : [0, 1, 2, 3].slice(0, n);
+  return order.map(i => i * 180 / n);
+}
+
+/*
+ * P : { spacing, angle(deg), passes, amax (couverture max d'une passe, 0..1), cut (px), step, smooth, tol }
+ * Retour : rubans [{ k, layer, pts }] de toutes les passes.
+ */
+function buildHatch(cov, W, H, P) {
+  const out = [], n = P.passes, LUT = 1024;
+  hatchAngles(n).forEach((a, layer) => {
+    const lut = new Float32Array(LUT + 1);
+    for (let q = 0; q <= LUT; q++) lut[q] = hatchCoverages(q / LUT, n, P.amax)[layer] * P.spacing;
+    const mapW = c => lut[Math.round(c * LUT)];
+    for (const r of buildRibbons(cov, W, H, { ...P, angle: P.angle + a, mapW })) { r.layer = layer; out.push(r); }
+  });
+  return out;
+}
+
 /* @core-end */
 
 /* ====================== Pipeline image ====================== */
 
 const MAXDIM = 1800;
 let W = 0, H = 0, baseGray = null, lo = 0, hi = 1;  // gris perceptuel de l'image source
-let ribbons = [], lastP = null;
 
 function setImageFromCanvas(c) {
   const ctx = c.getContext('2d'), d = ctx.getImageData(0, 0, c.width, c.height).data;
@@ -281,15 +427,29 @@ const I18N = {
   fr: { load:'Charger une image…', invert:'Inversion (clair → épais)', auto:'Normalisation automatique',
     phys:"Tons fidèles (gamma d'affichage)", mm:"Largeur d'impression du SVG (mm)",
     mmhint:"Taille physique du fichier SVG pour l'impression. Vide = taille en pixels.",
-    esvg:'Export SVG', epng:'Export PNG', drop:"Déposer l'image ici", sp:'% esp.', ribbons:'rubans', points:'points',
+    esvg:'Export SVG', epng:'Export PNG', drop:"Déposer l'image ici", sp:'% esp.',
+    ribbons:'rubans', vertices:'sommets', dotsn:'points',
+    style:'Style de trame', st_lines:'Lignes parallèles', st_dots:'Points (trame régulière)',
+    st_stochastic:'Points (trame stochastique)', st_hatch:'Hachures croisées',
+    layout:'Disposition des points', lay_square:'Carrée', lay_hex:'En quinconce',
     angle:'Angle', spacing:'Espacement', wmin:'Épaisseur min', wmax:'Épaisseur max', cut:'Seuil de coupure',
+    wmin_dots:'Diamètre min', wmax_dots:'Diamètre max', cut_dots:'Diamètre min visible',
+    wmax_hatch:'Épaisseur max par passe', cut_stochastic:'Seuil de densité',
+    passes:'Nombre de passes', dot:'Diamètre des points', seed:'Graine aléatoire',
     contrast:'Contraste', bright:'Luminosité', gamma:'Courbe de réponse (γ)', detail:'Lissage du détail',
     far:'Simuler la distance', scale:'Résolution PNG' },
   en: { load:'Load an image…', invert:'Invert (light → thick)', auto:'Auto-normalize',
     phys:'Faithful tones (display gamma)', mm:'SVG print width (mm)',
     mmhint:'Physical size of the SVG file for printing. Empty = size in pixels.',
-    esvg:'Export SVG', epng:'Export PNG', drop:'Drop the image here', sp:'% spacing', ribbons:'ribbons', points:'points',
+    esvg:'Export SVG', epng:'Export PNG', drop:'Drop the image here', sp:'% spacing',
+    ribbons:'ribbons', vertices:'vertices', dotsn:'dots',
+    style:'Screen style', st_lines:'Parallel lines', st_dots:'Dots (regular screen)',
+    st_stochastic:'Dots (stochastic screen)', st_hatch:'Cross-hatching',
+    layout:'Dot layout', lay_square:'Square', lay_hex:'Staggered',
     angle:'Angle', spacing:'Spacing', wmin:'Min thickness', wmax:'Max thickness', cut:'Cut-off threshold',
+    wmin_dots:'Min diameter', wmax_dots:'Max diameter', cut_dots:'Min visible diameter',
+    wmax_hatch:'Max thickness per pass', cut_stochastic:'Density threshold',
+    passes:'Number of passes', dot:'Dot diameter', seed:'Random seed',
     contrast:'Contrast', bright:'Brightness', gamma:'Response curve (γ)', detail:'Detail smoothing',
     far:'Simulate distance', scale:'PNG resolution' },
 };
@@ -299,25 +459,33 @@ const T = k => I18N[lang][k];
 const sliderRefresh = [];
 
 const ui = {};
-function slider(host, id, min, max, step, val, fmt) {
-  const label = id;
+let style = 'lines';
+const $ = id => document.getElementById(id);
+const sliderRows = [];
+const unitPct = () => style === 'stochastic' ? ' %' : ' ' + T('sp');
+function slider(host, id, min, max, step, val, fmt, styles) {
   const row = document.createElement('div'); row.className = 'row';
   row.innerHTML = `<label><span></span><b></b></label><input type="range">`;
-  const inp = row.querySelector('input'), out = row.querySelector('b');
+  const inp = row.querySelector('input'), out = row.querySelector('b'), lab = row.querySelector('span');
   Object.assign(inp, { min, max, step, value: val });
   const upd = () => { out.textContent = fmt ? fmt(+inp.value) : inp.value; };
-  const lab = row.querySelector('span');
-  sliderRefresh.push(() => { lab.textContent = T(id); upd(); });
+  const labelKey = () => (I18N[lang][id + '_' + style] ? id + '_' + style : id);
+  const refresh = () => { lab.textContent = T(labelKey()); row.hidden = !!styles && !styles.includes(style); upd(); };
+  sliderRefresh.push(refresh);
   inp.addEventListener('input', () => { upd(); schedule(); });
-  upd(); host.appendChild(row);
+  host.appendChild(row);
   ui[id] = { get: () => +inp.value, set: v => { inp.value = v; upd(); } };
 }
+const LINES = 'lines', DOTS = 'dots', STO = 'stochastic', HATCH = 'hatch';
 const s1 = document.getElementById('sliders'), s2 = document.getElementById('sliders2');
-slider(s1, 'angle', 0, 179, 1, 45, v => v + '°');
-slider(s1, 'spacing', 2, 60, 0.5, 8, v => v + ' px');
-slider(s1, 'wmin', 0, 50, 0.5, 2, v => v + ' ' + T('sp'));
-slider(s1, 'wmax', 20, 110, 1, 95, v => v + ' ' + T('sp'));
-slider(s1, 'cut', 0, 30, 0.5, 0, v => v + ' ' + T('sp'));
+slider(s1, 'angle', 0, 179, 1, 45, v => v + '°', [LINES, DOTS, HATCH]);
+slider(s1, 'spacing', 2, 60, 0.5, 8, v => v + ' px', [LINES, DOTS, HATCH]);
+slider(s1, 'passes', 2, 4, 1, 3, v => v, [HATCH]);
+slider(s1, 'dot', 1, 10, 0.1, 2.5, v => v.toFixed(1) + ' px', [STO]);
+slider(s1, 'seed', 1, 99, 1, 1, v => v, [STO]);
+slider(s1, 'wmin', 0, 50, 0.5, 2, v => v + ' ' + T('sp'), [LINES, DOTS]);
+slider(s1, 'wmax', 20, 150, 1, 95, v => v + ' ' + T('sp'), [LINES, DOTS, HATCH]);
+slider(s1, 'cut', 0, 30, 0.5, 0, v => v + unitPct());
 slider(s1, 'contrast', 0.2, 3, 0.05, 1, v => v.toFixed(2));
 slider(s1, 'bright', -0.5, 0.5, 0.01, 0, v => v.toFixed(2));
 slider(s1, 'gamma', 0.3, 3, 0.05, 1, v => v.toFixed(2));
@@ -325,11 +493,26 @@ slider(s1, 'detail', 0, 150, 5, 30, v => v + ' ' + T('sp'));
 slider(s2, 'far', 0, 12, 0.5, 0, v => v + ' px');
 slider(s2, 'scale', 1, 6, 1, 3, v => '×' + v);
 
-const $ = id => document.getElementById(id);
+// Réglages par défaut propres à chaque style (appliqués quand on change de style).
+const STYLE_DEFAULTS = {
+  lines: { wmin: 2, wmax: 95, cut: 0, detail: 30 },
+  dots: { wmin: 0, wmax: 120, cut: 4, detail: 35 },
+  hatch: { wmax: 55, cut: 1, detail: 30 },
+  stochastic: { cut: 2, detail: 30 },
+};
+$('style').addEventListener('change', e => {
+  style = e.target.value;
+  for (const [k, v] of Object.entries(STYLE_DEFAULTS[style])) ui[k].set(v);
+  applyLang();
+  schedule();
+});
+$('layout').addEventListener('change', schedule);
+
 function applyLang() {
   document.documentElement.lang = lang;
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = T(e.dataset.i18n); });
   sliderRefresh.forEach(f => f());
+  $('layoutRow').hidden = style !== 'dots';
   document.querySelectorAll('#lang button').forEach(b => b.classList.toggle('on', b.dataset.l === lang));
   if (typeof updateStats === 'function') updateStats();
 }
@@ -347,13 +530,24 @@ window.addEventListener('paste', e => { const f = [...e.clipboardData.files].fin
 
 /* ====================== Calcul + rendu ====================== */
 
-function params() {
-  const p = ui.spacing.get();
-  return {
-    spacing: p, angle: ui.angle.get(),
-    wmin: p * ui.wmin.get() / 100, wmax: p * ui.wmax.get() / 100, cut: p * ui.cut.get() / 100,
-    step: Math.max(0.75, p / 4), smooth: 1.5, tol: Math.max(0.03, p * 0.015),
-  };
+const EMPTY = new Float32Array(0);
+let art = { polys: [], circles: EMPTY };
+
+// Calcule la trame selon le style choisi : rubans (lignes, hachures) et/ou disques (points).
+function generate(cov) {
+  const p = ui.spacing.get(), pct = k => ui[k].get() / 100;
+  const common = { spacing: p, angle: ui.angle.get(), step: Math.max(0.75, p / 4), smooth: 1.5, tol: Math.max(0.03, p * 0.015) };
+  switch (style) {
+    case 'dots':
+      return { polys: [], circles: buildDots(cov, W, H, { spacing: p, angle: ui.angle.get(), layout: $('layout').value,
+        dmin: p * pct('wmin'), dmax: p * pct('wmax'), cut: p * pct('cut') }) };
+    case 'stochastic':
+      return { polys: [], circles: stochasticDots(cov, W, H, { dot: ui.dot.get(), cut: pct('cut'), seed: ui.seed.get() }) };
+    case 'hatch':
+      return { polys: buildHatch(cov, W, H, { ...common, passes: ui.passes.get(), amax: pct('wmax'), cut: p * pct('cut') }), circles: EMPTY };
+    default:
+      return { polys: buildRibbons(cov, W, H, { ...common, wmin: p * pct('wmin'), wmax: p * pct('wmax'), cut: p * pct('cut') }), circles: EMPTY };
+  }
 }
 
 function coverageMap() {
@@ -368,21 +562,24 @@ function coverageMap() {
     const Y = phys ? Math.pow(L, 2.2) : L;               // réflectance linéaire
     cov[i] = Math.pow(1 - Y, g);
   }
-  return gaussBlur(cov, W, H, ui.detail.get() / 100 * ui.spacing.get());
+  const unit = style === 'stochastic' ? ui.dot.get() * 3 : ui.spacing.get();   // échelle du motif
+  return gaussBlur(cov, W, H, ui.detail.get() / 100 * unit);
 }
 
 const canvas = $('stage');
-function drawRibbons(ctx, scale) {
+function drawArt(ctx, scale) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W * scale, H * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
   const path = new Path2D();
-  for (const { pts } of ribbons) {
+  for (const { pts } of art.polys) {
     path.moveTo(pts[0], pts[1]);
     for (let i = 2; i < pts.length; i += 2) path.lineTo(pts[i], pts[i + 1]);
     path.closePath();
   }
+  const c = art.circles;
+  for (let i = 0; i < c.length; i += 3) { path.moveTo(c[i] + c[i + 2], c[i + 1]); path.arc(c[i], c[i + 1], c[i + 2], 0, 2 * Math.PI); }
   ctx.fillStyle = '#000'; ctx.fill(path, 'nonzero');
 }
 
@@ -393,11 +590,10 @@ function render() {
   pending = false;
   if (!baseGray) return;
   const t0 = performance.now();
-  lastP = params();
-  ribbons = buildRibbons(coverageMap(), W, H, lastP);
+  art = generate(coverageMap());
   const sc = Math.min(1, 2000 / Math.max(W, H)) * Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.round(W * sc); canvas.height = Math.round(H * sc);
-  drawRibbons(canvas.getContext('2d'), sc);
+  drawArt(canvas.getContext('2d'), sc);
   const bw = main.clientWidth - 40, bh = main.clientHeight - 40, f = Math.min(bw / W, bh / H);
   canvas.style.width = Math.round(W * f) + 'px'; canvas.style.height = Math.round(H * f) + 'px';
   const far = ui.far.get();
@@ -406,10 +602,13 @@ function render() {
   updateStats();
 }
 let lastMs = 0;
+const hasArt = () => art.polys.length > 0 || art.circles.length > 0;
 function updateStats() {
-  if (!ribbons.length && !baseGray) return;
-  let np = 0; for (const r of ribbons) np += r.pts.length / 2;
-  $('stats').textContent = `${W}×${H} px · ${ribbons.length} ${T('ribbons')} · ${np} ${T('points')} · ${lastMs} ms`;
+  if (!baseGray) return;
+  let n;
+  if (art.circles.length) n = `${art.circles.length / 3} ${T('dotsn')}`;
+  else { let np = 0; for (const r of art.polys) np += r.pts.length / 2; n = `${art.polys.length} ${T('ribbons')} · ${np} ${T('vertices')}`; }
+  $('stats').textContent = `${W}×${H} px · ${n} · ${lastMs} ms`;
 }
 window.addEventListener('resize', schedule);
 
@@ -424,11 +623,13 @@ function buildSVG() {
     `<rect width="${W}" height="${H}" fill="#fff"/>`,
     `<clipPath id="c"><rect width="${W}" height="${H}"/></clipPath>`,
     `<g fill="#000" clip-path="url(#c)">`];
-  for (const { pts } of ribbons) {
+  for (const { pts } of art.polys) {
     let d = 'M' + fmt(pts[0]) + ' ' + fmt(pts[1]);
     for (let i = 2; i < pts.length; i += 2) d += 'L' + fmt(pts[i]) + ' ' + fmt(pts[i + 1]);
     parts.push(`<path d="${d}Z"/>`);
   }
+  const c = art.circles;
+  for (let i = 0; i < c.length; i += 3) parts.push(`<circle cx="${fmt(c[i])}" cy="${fmt(c[i + 1])}" r="${fmt(c[i + 2])}"/>`);
   parts.push('</g></svg>');
   return parts.join('\n');
 }
@@ -437,12 +638,12 @@ function download(blob, name) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-$('bsvg').addEventListener('click', () => { if (ribbons.length) download(new Blob([buildSVG()], { type: 'image/svg+xml' }), 'stria.svg'); });
+$('bsvg').addEventListener('click', () => { if (hasArt()) download(new Blob([buildSVG()], { type: 'image/svg+xml' }), 'stria.svg'); });
 $('bpng').addEventListener('click', () => {
-  if (!ribbons.length) return;
+  if (!hasArt()) return;
   const sc = Math.min(ui.scale.get(), 12000 / Math.max(W, H));
   const c = document.createElement('canvas'); c.width = Math.round(W * sc); c.height = Math.round(H * sc);
-  drawRibbons(c.getContext('2d'), sc);
+  drawArt(c.getContext('2d'), sc);
   c.toBlob(b => download(b, 'stria.png'), 'image/png');
 });
 
@@ -471,7 +672,7 @@ function selfTest() {
   console.log('STRIA SELFTEST', JSON.stringify(res));
   return res;
 }
-window.stria = { sampleBilinear, gaussBlur, smooth1D, simplifyProfile, buildRibbons, selfTest };
+window.stria = { sampleBilinear, gaussBlur, smooth1D, simplifyProfile, buildRibbons, buildDots, stochasticDots, buildHatch, selfTest };
 
 applyLang();
 setImageFromCanvas(demoImage());

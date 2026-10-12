@@ -15,6 +15,7 @@ export function extractCore(html = readFileSync(htmlPath, 'utf8')) {
 
 export function loadCore() {
   const code = extractCore() +
-    '\n({ clamp, sampleBilinear, gaussBlur, smooth1D, simplifyProfile, clipRange, buildRibbons });';
-  return vm.runInNewContext(code, { Math, Float32Array, Array });
+    '\n({ clamp, sampleBilinear, gaussBlur, smooth1D, simplifyProfile, clipRange, buildRibbons,\n' +
+    '   mulberry32, buildDots, stochasticDots, hatchCoverages, hatchAngles, buildHatch });';
+  return vm.runInNewContext(code, { Math, Float32Array, Int32Array, Array, Object });
 }
