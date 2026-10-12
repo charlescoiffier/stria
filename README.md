@@ -10,7 +10,7 @@ parallèles, points réguliers, points stochastiques et hachures croisées. Dans
 des éléments qui traduit la luminosité de l'image, comme dans une gravure. De près, on voit une trame ; à distance,
 l'image réapparaît.
 
-**Essayer l'application : https://charlescoiffier.github.io/stria/**
+**Essayer l'application : https://stria.charlescoiffier.fr/**
 
 Aucune installation : tout se passe dans le navigateur, et rien n'est envoyé à un serveur.
 Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-clic) : il fonctionne hors ligne.
@@ -190,5 +190,6 @@ il lance `npm test`, puis `npm run build`. Un badge en tête de ce README reflè
 
 - Hors `main` (branches, pull requests), `dist/` est conservé une semaine comme artefact du run, ce qui permet
   d'essayer une branche sans rien publier.
-- Sur un push vers `main`, si les tests et le build passent, `dist/` est publié sur GitHub Pages :
-  <https://charlescoiffier.github.io/stria/>. La page est donc toujours à jour avec `main`.
+- Sur un push vers `main`, le workflow [`deploy.yml`](.github/workflows/deploy.yml) construit une image Docker
+  (publiée sur GitHub Container Registry) et la déploie par SSH sur le serveur : <https://stria.charlescoiffier.fr/>.
+  Le site est donc toujours à jour avec `main`.
