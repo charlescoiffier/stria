@@ -503,10 +503,13 @@ const STYLE_DEFAULTS = {
 $('style').addEventListener('change', e => {
   style = e.target.value;
   for (const [k, v] of Object.entries(STYLE_DEFAULTS[style])) ui[k].set(v);
+  if (style === 'dots') dotsMaxDefault();
   applyLang();
   schedule();
 });
-$('layout').addEventListener('change', schedule);
+// Diamètre max par défaut : en quinconce les points se touchent plus tôt (noir plein dès ~115 %, ~140 % en carré).
+function dotsMaxDefault() { ui.wmax.set($('layout').value === 'hex' ? 100 : 120); }
+$('layout').addEventListener('change', () => { dotsMaxDefault(); schedule(); });
 
 function applyLang() {
   document.documentElement.lang = lang;
@@ -676,6 +679,12 @@ window.stria = { sampleBilinear, gaussBlur, smooth1D, simplifyProfile, buildRibb
 
 applyLang();
 setImageFromCanvas(demoImage());
+// Paramètres d'URL (liens de démonstration, captures du README) : ?style=dots|stochastic|hatch&layout=hex
+{
+  const q = new URLSearchParams(location.search);
+  if (q.get('layout') === 'hex') $('layout').value = 'hex';
+  if (STYLE_DEFAULTS[q.get('style')]) { $('style').value = q.get('style'); $('style').dispatchEvent(new Event('change')); }
+}
 if (location.search.includes('test')) selfTest();
 </script>
 </body>

@@ -15,7 +15,7 @@ l'image réapparaît.
 Aucune installation : tout se passe dans le navigateur, et rien n'est envoyé à un serveur.
 Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-clic) : il fonctionne hors ligne.
 
-![Stria : l'image de démonstration convertie en trame de lignes, avec le panneau de réglages à gauche](docs/images/stria.png)
+![Stria : l'image de démonstration convertie en trame de lignes parallèles, avec le panneau de réglages à gauche](docs/images/stria.png)
 
 ---
 
@@ -38,6 +38,22 @@ Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-c
 | **Points (trame stochastique)** | Points tous du **même diamètre**, placés sans alignement ; c'est leur **densité** qui varie. La graine aléatoire permet de changer de tirage, ou de retrouver exactement le même. |
 | **Hachures croisées** | 2 à 4 passes de lignes parallèles d'angles différents, superposées : la première couvre les tons clairs, les suivantes s'ajoutent à mesure que l'image s'assombrit. |
 
+### Aperçu des styles
+
+La même image de démonstration, dans chacun des trois autres styles (réglages par défaut) :
+
+**Points en quinconce** : diamètre variable, réseau régulier.
+
+![Trame de points en quinconce, avec le panneau de réglages du style](docs/images/points.png)
+
+**Points stochastiques** : diamètre constant, densité variable.
+
+![Trame stochastique, avec le panneau de réglages du style](docs/images/stochastique.png)
+
+**Hachures croisées** : trois passes d'angles différents.
+
+![Hachures croisées à trois passes, avec le panneau de réglages du style](docs/images/hachures.png)
+
 Changer de style remet les réglages d'épaisseur et de seuil à des valeurs adaptées à ce style ; les réglages d'image
 (contraste, luminosité…) sont conservés.
 
@@ -49,7 +65,7 @@ Selon le style, certains réglages sont masqués ou renommés (par exemple « É
 |---|---|
 | **Angle** | Orientation des lignes, du réseau de points ou de la première passe de hachures (45° par défaut). |
 | **Espacement** | Distance entre deux lignes voisines, ou pas du réseau de points, en pixels de l'image. Plus il est petit, plus la trame est fine. |
-| **Disposition des points** | Carrée ou en quinconce (points réguliers uniquement). |
+| **Disposition des points** | Carrée ou en quinconce (points réguliers uniquement). Le diamètre max par défaut s'adapte : 120 % en carré, 100 % en quinconce. |
 | **Diamètre des points** | Diamètre commun des points, en pixels (stochastique uniquement). |
 | **Graine aléatoire** | Change le tirage des points (stochastique uniquement). |
 | **Nombre de passes** | Nombre de directions de hachures, de 2 à 4 (hachures uniquement). |
@@ -134,6 +150,8 @@ tests/                tests (node:test, sans dépendance)
   app.test.mjs          garde-fous sur index.html (script valide, traductions synchronisées)
 scripts/build.mjs     valide index.html et le copie dans dist/
 scripts/serve.mjs     petit serveur local de développement
+scripts/capture-readme.mjs  régénère les captures du README (docs/images/) avec Chrome headless
+docs/images/          captures affichées dans le README
 .github/workflows/    intégration continue
 ```
 
@@ -150,7 +168,11 @@ Prérequis : Node.js 22 ou plus récent. Aucune dépendance à installer.
 npm start       # serveur local : http://localhost:5173 (index.html relu à chaque rechargement)
 npm test        # lance les tests
 npm run build   # valide index.html et l'écrit dans dist/
+npm run capture:readme   # régénère docs/images/*.png (Chrome requis ; variable CHROME pour un autre chemin)
 ```
+
+L'URL accepte `?style=dots|stochastic|hatch` et `&layout=hex` pour ouvrir directement un style (c'est ce que
+`capture:readme` utilise).
 
 On peut aussi ouvrir `index.html?test` : un auto-test géométrique s'exécute et écrit son résultat dans la console
 du navigateur (`STRIA SELFTEST`).
