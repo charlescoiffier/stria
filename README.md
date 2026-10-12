@@ -111,12 +111,15 @@ Chaque ligne est un **ruban** : un polygone fermé dont l'axe est strictement re
 1. **Luminance** : gris perceptuel, normalisation (percentiles 1 % / 99 %), contraste et luminosité, inversion
    éventuelle, puis conversion en **couverture** (0 = blanc, 1 = noir) avec correction gamma si « tons fidèles ».
 2. **Flou gaussien** (3 passes de boîte) de la carte de couverture, proportionnel à l'espacement.
-3. **Géométrie** : repère tourné de l'angle choisi ; les axes sont à `v = k · espacement`, rognés aux bords de l'image.
+3. **Géométrie** : repère tourné de l'angle choisi ; les axes sont à `v = k · espacement`, prolongés un peu au-delà de l'image.
 4. **Échantillonnage le long de chaque ligne** (pas ≈ espacement / 4, interpolation bilinéaire), avec 5 prises
    perpendiculaires pondérées sur la bande entre deux lignes : on mesure ce que l'œil perçoit et on évite le moiré.
 5. **Profil d'épaisseur** : `w = wmin + (wmax − wmin) × couverture`, lissé en 1D le long de la ligne, découpé en
    tronçons là où `w < seuil de coupure`, puis simplifié (Douglas-Peucker) pour un SVG léger.
-6. **Rendu** : un seul `Path2D` pour l'aperçu et le PNG ; un `<path>` par ruban pour le SVG (coordonnées à 2 décimales,
+6. **Découpe au cadre** : les rubans sont prolongés au-delà de l'image, puis le polygone est découpé exactement sur le
+   contour (Sutherland–Hodgman, `clipPolygonRect`) : les extrémités des lignes sont alignées sur les bords du cadre,
+   sans encoche ni débord, quel que soit l'angle.
+7. **Rendu** : un seul `Path2D` pour l'aperçu et le PNG ; un `<path>` par ruban pour le SVG (coordonnées à 2 décimales,
    clipPath aux bornes de l'image).
 
 ### Points réguliers (`buildDots`)

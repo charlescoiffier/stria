@@ -177,9 +177,43 @@ function clipRange(o, d, lo, hi, rng) {
   rng[0] = Math.max(rng[0], t1); rng[1] = Math.min(rng[1], t2);
 }
 
+// Sutherland–Hodgman : garde la partie d'un polygone (tableau plat [x0,y0,x1,y1,…]) du bon côté d'une droite x = bound
+// (axis 0) ou y = bound (axis 1). Les points d'intersection sont posés exactement sur la droite.
+function clipHalf(poly, axis, bound, keepGreater) {
+  const out = [], n = poly.length / 2;
+  if (!n) return out;
+  const inside = c => (keepGreater ? c >= bound : c <= bound);
+  let px = poly[2 * n - 2], py = poly[2 * n - 1], pc = axis ? py : px, pin = inside(pc);
+  for (let i = 0; i < n; i++) {
+    const x = poly[2 * i], y = poly[2 * i + 1], c = axis ? y : x, cin = inside(c);
+    if (cin !== pin) {
+      const t = (bound - pc) / (c - pc);
+      if (axis) out.push(px + (x - px) * t, bound); else out.push(bound, py + (y - py) * t);
+    }
+    if (cin) out.push(x, y);
+    px = x; py = y; pc = c; pin = cin;
+  }
+  return out;
+}
+
+// Découpe un polygone au rectangle [0,W]×[0,H] ; null s'il n'en reste rien.
+function clipPolygonRect(pts, W, H) {
+  let inside = true;
+  for (let i = 0; i < pts.length; i += 2) {
+    if (pts[i] < 0 || pts[i] > W || pts[i + 1] < 0 || pts[i + 1] > H) { inside = false; break; }
+  }
+  if (inside) return pts;
+  let poly = Array.from(pts);
+  poly = clipHalf(poly, 0, 0, true); poly = clipHalf(poly, 0, W, false);
+  poly = clipHalf(poly, 1, 0, true); poly = clipHalf(poly, 1, H, false);
+  return poly.length < 6 ? null : Float32Array.from(poly);
+}
+
 /*
  * Construit les rubans. `cov` = carte de couverture (0 = blanc, 1 = noir), W×H.
  * P : { spacing, angle(deg), wmin, wmax (ou mapW : couverture → épaisseur px), cut (px), step (px), smooth (échantillons), tol (px) }
+ * Les rubans débordent d'abord du cadre, puis sont découpés exactement sur son contour : leurs extrémités
+ * s'alignent sur les bords de l'image, quel que soit l'angle.
  * Retour : [{ k, pts: Float32Array [x0,y0,x1,y1,…] }]  (polygone fermé : bord +, puis bord − inversé)
  */
 function buildRibbons(cov, W, H, P) {
@@ -187,12 +221,13 @@ function buildRibbons(cov, W, H, P) {
   const dx = Math.cos(th), dy = Math.sin(th), nx = -dy, ny = dx;
   const cx = W / 2, cy = H / 2, R = Math.hypot(W, H) / 2;
   const kmax = Math.ceil(R / p);
+  const mg = 0.75 * Math.max(p, P.wmax || 0);        // débord : le ruban doit dépasser le cadre sur toute sa largeur
   const taps = [-0.4, -0.2, 0, 0.2, 0.4], tw = [1, 2, 3, 2, 1], twSum = 9;
   const out = [];
   for (let k = -kmax; k <= kmax; k++) {
     const v = k * p, ox = cx + nx * v, oy = cy + ny * v;
     const rng = [-R, R];
-    clipRange(ox, dx, 0, W, rng); clipRange(oy, dy, 0, H, rng);
+    clipRange(ox, dx, -mg, W + mg, rng); clipRange(oy, dy, -mg, H + mg, rng);
     const len = rng[1] - rng[0];
     if (len < P.step) continue;
     const n = Math.ceil(len / P.step) + 1;
@@ -227,7 +262,8 @@ function buildRibbons(cov, W, H, P) {
           const r = 2 * m + 2 * (m - 1 - q);
           pts[r] = bx - nx * h; pts[r + 1] = by - ny * h;
         }
-        out.push({ k, pts });
+        const clipped = clipPolygonRect(pts, W, H);
+        if (clipped) out.push({ k, pts: clipped });
       }
       i = j;
     }
