@@ -9,7 +9,9 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
 if (scripts.length !== 1) throw new Error(`Un seul <script> inline attendu, ${scripts.length} trouvé(s)`);
 new vm.Script(scripts[0][1], { filename: 'index.html' });
 extractCore(html);
-if (/<script[^>]+src=|<link[^>]+href=["']https?:/i.test(html)) throw new Error('index.html doit rester autonome (aucune ressource externe)');
+// Seule exception à l'autonomie : le script de statistiques de visite (Umami, sans cookie).
+const ANALYTICS = /<script defer src="https:\/\/stats\.charlescoiffier\.fr\/script\.js"[^>]*><\/script>/;
+if (/<script[^>]+src=|<link[^>]+href=["']https?:/i.test(html.replace(ANALYTICS, ''))) throw new Error('index.html doit rester autonome (aucune ressource externe, hors statistiques de visite)');
 
 const out = new URL('../dist/', import.meta.url);
 rmSync(out, { recursive: true, force: true });
