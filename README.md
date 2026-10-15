@@ -35,8 +35,8 @@ Vous pouvez aussi télécharger [`index.html`](index.html) et l'ouvrir (double-c
 |---|---|
 | **Lignes parallèles** | Lignes droites à espacement constant ; leur **épaisseur** varie, de façon continue le long de chaque ligne. |
 | **Points (trame régulière)** | Points sur un réseau **carré** ou **en quinconce** (disposition hexagonale), d'angle réglable ; leur **diamètre** varie selon la luminosité (demi-teinte classique). |
-| **Points (trame stochastique)** | Points tous du **même diamètre**, placés sans alignement ; c'est leur **densité** qui varie. La graine aléatoire permet de changer de tirage, ou de retrouver exactement le même. |
-| **Hachures croisées** | 2 à 4 passes de lignes parallèles d'angles différents, superposées : la première couvre les tons clairs, les suivantes s'ajoutent à mesure que l'image s'assombrit. |
+| **Points (trame stochastique)** | Points tous du **même diamètre**, placés sans alignement ; c'est leur **densité** qui varie, calibrée pour que la surface encrée suive la tonalité (le noir reste noir). La graine aléatoire permet de changer de tirage, ou de retrouver exactement le même. |
+| **Hachures croisées** | 2 à 6 passes de lignes parallèles d'angles différents, superposées. **Tous les traits ont la même épaisseur** : la tonalité vient du nombre de passes superposées et du nombre de traits tracés dans chaque passe (comme à la plume). |
 
 ### Aperçu des styles
 
@@ -50,12 +50,13 @@ La même image de démonstration, dans chacun des trois autres styles (réglages
 
 ![Trame stochastique, avec le panneau de réglages du style](docs/images/stochastique.png)
 
-**Hachures croisées** : trois passes d'angles différents.
+**Hachures croisées** : quatre passes d'angles différents, traits d'épaisseur constante.
 
-![Hachures croisées à trois passes, avec le panneau de réglages du style](docs/images/hachures.png)
+![Hachures croisées à quatre passes, avec le panneau de réglages du style](docs/images/hachures.png)
 
-Changer de style remet les réglages d'épaisseur et de seuil à des valeurs adaptées à ce style ; les réglages d'image
-(contraste, luminosité…) sont conservés.
+Changer de style remet les réglages d'épaisseur, de seuil et de lissage à des valeurs adaptées à ce style ; le contraste,
+la luminosité et la courbe de réponse sont conservés. La trame stochastique démarre en tonalité perceptuelle (« Tons
+fidèles » décoché), qui donne un semis plus aéré.
 
 ## Les réglages
 
@@ -64,12 +65,12 @@ Selon le style, certains réglages sont masqués ou renommés (par exemple « É
 | Réglage | Effet |
 |---|---|
 | **Angle** | Orientation des lignes, du réseau de points ou de la première passe de hachures (45° par défaut). |
-| **Espacement** | Distance entre deux lignes voisines, ou pas du réseau de points, en pixels de l'image. Plus il est petit, plus la trame est fine. |
+| **Espacement** | Distance entre deux lignes voisines, ou pas du réseau de points, en pixels de l'image. Plus il est petit, plus la trame est fine. Le curseur est **logarithmique** (précis aux petites valeurs) et son amplitude s'adapte à la taille de l'image (de ≈ 0,1 % à 4 % du grand côté). |
 | **Disposition des points** | Carrée ou en quinconce (points réguliers uniquement). Le diamètre max par défaut s'adapte : 120 % en carré, 100 % en quinconce. |
-| **Diamètre des points** | Diamètre commun des points, en pixels (stochastique uniquement). |
+| **Diamètre des points** | Diamètre commun des points, en pixels (stochastique uniquement) ; curseur logarithmique, amplitude adaptée à l'image. |
 | **Graine aléatoire** | Change le tirage des points (stochastique uniquement). |
-| **Nombre de passes** | Nombre de directions de hachures, de 2 à 4 (hachures uniquement). |
-| **Épaisseur min / max** | Épaisseur des lignes dans les zones claires / sombres, en % de l'espacement. À 100 % ou plus, les noirs deviennent pleins. Pour les points : diamètre min / max (il faut environ 140 % en réseau carré, 115 % en quinconce, pour un noir plein). Pour les hachures : épaisseur maximale d'**une** passe. |
+| **Nombre de passes** | Nombre de directions de hachures, de 2 à 6 (hachures uniquement). Plus il y a de passes, plus les noirs sont profonds. |
+| **Épaisseur min / max** | Épaisseur des lignes dans les zones claires / sombres, en % de l'espacement. À 100 % ou plus, les noirs deviennent pleins. Pour les points : diamètre min / max (il faut environ 140 % en réseau carré, 115 % en quinconce, pour un noir plein). Pour les hachures : l'unique « épaisseur du trait » (constante). |
 | **Seuil de coupure** | Supprime les lignes (ou les points) plus fins que ce seuil : les zones très claires deviennent du blanc pur. En stochastique : densité minimale en dessous de laquelle on ne place plus de points. |
 | **Contraste, Luminosité** | Ajustent l'image avant la conversion. |
 | **Courbe de réponse (γ)** | Relation entre luminosité et épaisseur : au-dessus de 1, les tons moyens s'éclaircissent ; au-dessous, ils s'assombrissent. |
@@ -81,7 +82,21 @@ Selon le style, certains réglages sont masqués ou renommés (par exemple « É
 | **Résolution PNG** | Facteur d'agrandissement de l'export PNG (×1 à ×6, plafonné à 12 000 px de côté). |
 | **Largeur d'impression du SVG (mm)** | Taille physique du fichier SVG : 300 donne un SVG de 300 mm de large, hauteur proportionnelle. Vide = taille en pixels. |
 
-Le bouton **FR | EN**, en haut du panneau, change la langue de l'interface (le choix est mémorisé).
+Le bouton **FR | EN**, en haut du panneau, change la langue de l'interface, et le bouton rond à côté bascule entre le
+**thème clair et le thème sombre** (par défaut, celui de votre système). Les deux choix sont mémorisés. L'aperçu de la
+trame reste noir sur blanc quel que soit le thème.
+
+## Sur smartphone
+
+Sur un écran étroit, l'image occupe tout l'écran et le panneau de réglages devient un **volet en bas de l'écran** :
+il est replié au départ ; touchez **Réglages** pour le déplier (l'image se réduit pour rester visible au-dessus) et
+touchez-le de nouveau pour le replier.
+
+| Volet replié | Volet déplié, thème clair |
+|---|---|
+| ![Stria sur smartphone, volet de réglages replié](docs/images/mobile.png) | ![Stria sur smartphone, volet déplié, thème clair](docs/images/mobile-reglages.png) |
+
+![Stria en thème clair, points en quinconce](docs/images/clair.png)
 
 ## Conseils
 
@@ -131,16 +146,21 @@ proportionnelle à la tonalité.
 ### Points stochastiques (`stochasticDots`)
 
 Disques de Poisson à **rayon variable** (algorithme de Bridson, grille d'accélération) : la distance minimale entre deux
-points vaut `K·d / √couverture` (K ≈ 0,7), de sorte que le nombre de points par unité de surface suit la tonalité tout
-en restant un bruit bleu, sans alignement ni amas. Des germes répartis dans toute l'image évitent de laisser vides des
+points vaut `0,7·d / √x`, où `x` est la densité réduite (nombre de points × aire d'un point par unité de surface) : le
+nombre de points suit la tonalité tout en restant un bruit bleu, sans alignement ni amas. Aux tons clairs `x` vaut la
+couverture visée ; aux tons sombres les points se recouvrent, donc `stochasticDensity` en ajoute (table mesurée) pour que
+la surface réellement encrée suive la tonalité, noir compris (jusqu'à ≈ 97 %). Des germes répartis dans toute l'image évitent de laisser vides des
 zones sombres isolées. Le tirage est piloté par un générateur à graine (`mulberry32`) : même graine, même résultat.
 
 ### Hachures croisées (`buildHatch`)
 
-`n` passes de lignes (angles répartis sur 180° : 0/90, 0/60/120 ou 0/90/45/135 pour 2, 3 ou 4 passes) construites avec le
-même générateur de rubans que les lignes simples. Chaque passe couvre au plus `amax` ; avec des recouvrements
-indépendants, la couverture totale vaut `1 − Π(1 − aᵢ)`, et `hatchCoverages` répartit la tonalité visée entre les passes
-pour que ce total reproduise la luminosité.
+`n` passes de lignes (angles répartis sur 180°, chaque nouvelle passe la plus éloignée des précédentes : 0/90, 0/60/120,
+0/90/45/135…), construites avec le même générateur de rubans que les lignes simples, mais **avec une épaisseur
+constante**. Une passe saturée couvre au plus `a = épaisseur / espacement` ; avec des recouvrements indépendants, la
+couverture totale vaut `1 − Π(1 − aᵢ)`, et `hatchCoverages` répartit la tonalité visée entre les passes. Dans une passe,
+la tonalité qui lui revient fixe la **part de lignes tracées** : la ligne `k` n'existe que là où cette part dépasse son
+seuil `θₖ` (suite de Weyl `k·φ mod 1`, régulièrement répartie). La montée est donc progressive sans changer l'épaisseur,
+et chaque trait est un simple rectangle (ce qui allège le SVG). Les tronçons plus courts qu'un espacement sont ignorés.
 
 ## Organisation du dépôt
 
@@ -174,8 +194,8 @@ npm run build   # valide index.html et l'écrit dans dist/
 npm run capture:readme   # régénère docs/images/*.png (Chrome requis ; variable CHROME pour un autre chemin)
 ```
 
-L'URL accepte `?style=dots|stochastic|hatch` et `&layout=hex` pour ouvrir directement un style (c'est ce que
-`capture:readme` utilise).
+L'URL accepte `?style=dots|stochastic|hatch`, `&layout=hex`, `&theme=light|dark` et `&panel=open` (volet mobile déplié)
+pour ouvrir directement un état précis (c'est ce que `capture:readme` utilise).
 
 On peut aussi ouvrir `index.html?test` : un auto-test géométrique s'exécute et écrit son résultat dans la console
 du navigateur (`STRIA SELFTEST`).

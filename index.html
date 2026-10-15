@@ -2,58 +2,128 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Stria — trame linéaire</title>
 <style>
-  :root { --bg:#16171a; --panel:#1e2024; --line:#2e3138; --fg:#e6e7ea; --dim:#8b8f98; --acc:#f2f2f2; }
+  :root {
+    color-scheme: dark;
+    --bg:#16171a; --panel:#1e2024; --line:#2e3138; --fg:#e6e7ea; --dim:#8b8f98;
+    --ctl:#2b2e35; --ctl-h:#353943; --bd:#3a3e47; --inp:#14151a; --accent:#ddd;
+    --prim-bg:#e9e9ea; --prim-fg:#111; --scroll:#3a3e47; --scroll-h:#555a66;
+    --shadow:0 6px 40px #0008; --veil:#000a; --veil-bd:#fff6; --sheet-shadow:0 -6px 28px #0006;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme=dark]) {
+      color-scheme: light;
+      --bg:#e9eaed; --panel:#fff; --line:#e3e5e9; --fg:#1b1c20; --dim:#666b75;
+      --ctl:#f2f3f5; --ctl-h:#e7e9ed; --bd:#cfd2d8; --inp:#fff; --accent:#3a3d44;
+      --prim-bg:#1b1c20; --prim-fg:#fff; --scroll:#c9ccd2; --scroll-h:#a9adb5;
+      --shadow:0 4px 28px #0003; --veil:#fffc; --veil-bd:#0006; --sheet-shadow:0 -6px 28px #0002;
+    }
+  }
+  :root[data-theme=light] {
+    color-scheme: light;
+    --bg:#e9eaed; --panel:#fff; --line:#e3e5e9; --fg:#1b1c20; --dim:#666b75;
+    --ctl:#f2f3f5; --ctl-h:#e7e9ed; --bd:#cfd2d8; --inp:#fff; --accent:#3a3d44;
+    --prim-bg:#1b1c20; --prim-fg:#fff; --scroll:#c9ccd2; --scroll-h:#a9adb5;
+    --shadow:0 4px 28px #0003; --veil:#fffc; --veil-bd:#0006; --sheet-shadow:0 -6px 28px #0002;
+  }
   * { box-sizing:border-box; }
   html,body { height:100%; margin:0; background:var(--bg); color:var(--fg);
     font:13px/1.4 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif; }
   #app { display:grid; grid-template-columns:272px 1fr; height:100%; }
   aside { background:var(--panel); border-right:1px solid var(--line); overflow-y:auto; padding:12px 14px;
-    scrollbar-width:thin; scrollbar-color:#3a3e47 transparent; }
-  aside::-webkit-scrollbar { width:6px; }
-  aside::-webkit-scrollbar-track { background:transparent; }
-  aside::-webkit-scrollbar-thumb { background:#3a3e47; border-radius:3px; }
-  aside::-webkit-scrollbar-thumb:hover { background:#555a66; }
-  .head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-  .lang { display:flex; border:1px solid #3a3e47; border-radius:999px; overflow:hidden; }
+    scrollbar-width:thin; scrollbar-color:var(--scroll) transparent; }
+  aside::-webkit-scrollbar, #panelBody::-webkit-scrollbar { width:6px; }
+  aside::-webkit-scrollbar-track, #panelBody::-webkit-scrollbar-track { background:transparent; }
+  aside::-webkit-scrollbar-thumb, #panelBody::-webkit-scrollbar-thumb { background:var(--scroll); border-radius:3px; }
+  aside::-webkit-scrollbar-thumb:hover, #panelBody::-webkit-scrollbar-thumb:hover { background:var(--scroll-h); }
+  .head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .tools { display:flex; align-items:center; gap:6px; }
+  .lang { display:flex; border:1px solid var(--bd); border-radius:999px; overflow:hidden; }
   .lang button { width:auto; border:0; border-radius:0; background:transparent; color:var(--dim);
     padding:2px 9px; font-size:11px; font-weight:600; letter-spacing:.04em; }
-  .lang button.on { background:#e9e9ea; color:#111; }
+  .lang button:hover { background:transparent; color:var(--fg); }
+  .lang button.on { background:var(--prim-bg); color:var(--prim-fg); }
+  button.icon { width:26px; height:26px; padding:0; display:grid; place-items:center; border-radius:999px;
+    background:transparent; color:var(--dim); }
+  button.icon:hover { background:var(--ctl-h); color:var(--fg); }
+  button.icon svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  #theme[data-mode=dark] .moon, #theme[data-mode=light] .sun { display:none; }
+  .toggle { display:none; width:auto; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-weight:600; }
+  .toggle svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; transition:transform .2s; }
+  aside:not(.collapsed) .toggle svg { transform:rotate(180deg); }
   .hint { color:var(--dim); font-size:11px; margin-top:3px; }
   h1 { font-size:15px; margin:0; letter-spacing:.08em; text-transform:uppercase; }
   .sub { color:var(--dim); font-size:12px; }
   .row { margin:6px 0; }
   .row label { display:flex; justify-content:space-between; color:var(--dim); margin-bottom:0; font-size:12px; }
   .row label b { color:var(--fg); font-weight:500; font-variant-numeric:tabular-nums; }
-  input[type=range] { width:100%; accent-color:#ddd; margin:2px 0 0; height:14px; }
+  input[type=range] { width:100%; accent-color:var(--accent); margin:2px 0 0; height:14px; }
   .chk { display:flex; align-items:center; gap:8px; margin:5px 0; cursor:pointer; font-size:12px; }
   .sep { height:1px; background:var(--line); margin:10px 0; }
-  button, .btn { background:#2b2e35; color:var(--fg); border:1px solid #3a3e47; border-radius:6px;
+  button, .btn { background:var(--ctl); color:var(--fg); border:1px solid var(--bd); border-radius:6px;
     padding:6px 10px; font:inherit; cursor:pointer; width:100%; text-align:center; display:block; }
-  button:hover, .btn:hover { background:#353943; }
-  button.primary { background:#e9e9ea; color:#111; border-color:#e9e9ea; }
+  button:hover, .btn:hover { background:var(--ctl-h); }
+  button.primary { background:var(--prim-bg); color:var(--prim-fg); border-color:var(--prim-bg); }
+  button.primary:hover { background:var(--prim-bg); opacity:.88; }
   .btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-  select { width:100%; background:#14151a; color:var(--fg); border:1px solid #3a3e47; border-radius:5px; padding:5px 7px; font:inherit; margin-top:3px; }
+  select { width:100%; background:var(--inp); color:var(--fg); border:1px solid var(--bd); border-radius:5px; padding:5px 7px; font:inherit; margin-top:3px; }
   .row[hidden] { display:none; }
-  input[type=number] { width:100%; background:#14151a; color:var(--fg); border:1px solid #3a3e47; border-radius:5px; padding:5px 7px; }
+  input[type=number] { width:100%; background:var(--inp); color:var(--fg); border:1px solid var(--bd); border-radius:5px; padding:5px 7px; }
   main { position:relative; display:flex; align-items:center; justify-content:center; padding:20px; min-width:0; min-height:0; overflow:hidden; }
-  #stage { background:#fff; max-width:100%; max-height:100%; box-shadow:0 6px 40px #0008; }
+  #stage { background:#fff; max-width:100%; max-height:100%; box-shadow:var(--shadow); }
   #info { position:absolute; left:20px; bottom:8px; color:var(--dim); font-size:12px; pointer-events:none; }
-  #drop { position:absolute; inset:10px; border:2px dashed #fff6; border-radius:10px; display:none;
-    align-items:center; justify-content:center; font-size:18px; background:#000a; }
+  #drop { position:absolute; inset:10px; border:2px dashed var(--veil-bd); border-radius:10px; display:none;
+    align-items:center; justify-content:center; font-size:18px; background:var(--veil); }
   main.over #drop { display:flex; }
+
+  /* Smartphone : le panneau devient un volet en bas de l'écran, que l'on déplie ou replie. */
+  @media (max-width: 760px) {
+    #app { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; height:100dvh; }
+    main { grid-row:1; padding:10px; }
+    aside { grid-row:2; display:flex; flex-direction:column; overflow:hidden; max-height:68dvh; padding:0;
+      border-right:0; border-top:1px solid var(--line); border-radius:16px 16px 0 0; box-shadow:var(--sheet-shadow);
+      padding-bottom:env(safe-area-inset-bottom); }
+    .head { position:relative; margin:0; padding:14px 14px 8px; }
+    .head::before { content:""; position:absolute; top:5px; left:50%; width:36px; height:4px; margin-left:-18px;
+      border-radius:2px; background:var(--bd); }
+    .toggle { display:flex; }
+    #panelBody { flex:1 1 auto; min-height:0; overflow-y:auto; padding:0 14px 14px; overscroll-behavior:contain;
+      scrollbar-width:thin; scrollbar-color:var(--scroll) transparent; }
+    aside.collapsed #panelBody { display:none; }
+    aside.collapsed .head { padding-bottom:12px; }
+    .row { margin:9px 0; }
+    .row label { font-size:13px; }
+    input[type=range] { height:26px; margin:0; }
+    .chk { margin:9px 0; font-size:13px; }
+    .chk input { width:18px; height:18px; }
+    select, input[type=number] { font-size:16px; padding:8px 9px; }
+    button, .btn { padding:10px 12px; }
+    .lang button { padding:4px 10px; }
+    button.icon { width:32px; height:32px; }
+  }
 </style>
 <script defer src="https://stats.charlescoiffier.fr/script.js" data-website-id="e67e9d23-dc79-4e47-b82a-cc0df59c7427" data-domains="stria.charlescoiffier.fr" data-do-not-track="true"></script>
 </head>
 <body>
 <div id="app">
-  <aside>
+  <aside id="panel" class="collapsed">
     <div class="head">
       <h1>Stria</h1>
-      <div class="lang" id="lang"><button data-l="fr">FR</button><button data-l="en">EN</button></div>
+      <div class="tools">
+        <div class="lang" id="lang"><button data-l="fr">FR</button><button data-l="en">EN</button></div>
+        <button class="icon" id="theme" type="button" data-mode="dark">
+          <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <button class="toggle" id="toggle" type="button" aria-expanded="false" aria-controls="panelBody">
+          <span data-i18n="settings">Réglages</span>
+          <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+        </button>
+      </div>
     </div>
+    <div id="panelBody">
     <label class="btn" for="file" data-i18n="load">Charger une image…</label>
     <input id="file" type="file" accept="image/*" hidden>
     <div class="sep"></div>
@@ -85,6 +155,7 @@
       <button id="bpng" data-i18n="epng">Export PNG</button>
     </div>
     <div class="sub" id="stats" style="margin-top:10px"></div>
+    </div>
   </aside>
   <main id="main">
     <canvas id="stage"></canvas>
@@ -212,7 +283,7 @@ function clipPolygonRect(pts, W, H) {
 
 /*
  * Construit les rubans. `cov` = carte de couverture (0 = blanc, 1 = noir), W×H.
- * P : { spacing, angle(deg), wmin, wmax (ou mapW : couverture → épaisseur px), cut (px), step (px), smooth (échantillons), tol (px) }
+ * P : { spacing, angle(deg), wmin, wmax (ou mapW(couverture, k) → épaisseur px), cut (px), minRun (px, longueur minimale d'un tronçon), step (px), smooth (échantillons), tol (px) }
  * Les rubans débordent d'abord du cadre, puis sont découpés exactement sur son contour : leurs extrémités
  * s'alignent sur les bords de l'image, quel que soit l'angle.
  * Retour : [{ k, pts: Float32Array [x0,y0,x1,y1,…] }]  (polygone fermé : bord +, puis bord − inversé)
@@ -245,7 +316,7 @@ function buildRibbons(cov, W, H, P) {
       w[i] = c / twSum;
     }
     const ws = smooth1D(w, P.smooth);
-    for (let i = 0; i < n; i++) ws[i] = P.mapW ? P.mapW(clamp(ws[i], 0, 1)) : P.wmin + (P.wmax - P.wmin) * clamp(ws[i], 0, 1);
+    for (let i = 0; i < n; i++) ws[i] = P.mapW ? P.mapW(clamp(ws[i], 0, 1), k) : P.wmin + (P.wmax - P.wmin) * clamp(ws[i], 0, 1);
     // tronçons où l'épaisseur dépasse le seuil de coupure (jamais de ruban d'épaisseur nulle)
     const cut = Math.max(P.cut, 1e-3);
     let i = 0;
@@ -253,7 +324,7 @@ function buildRibbons(cov, W, H, P) {
       while (i < n && ws[i] < cut) i++;
       let j = i;
       while (j < n && ws[j] >= cut) j++;
-      if (j - i >= 2) {
+      if (j - i >= 2 && s[j - 1] - s[i] >= (P.minRun || 0)) {
         const idx = simplifyProfile(s, ws, i, j - 1, P.tol), m = idx.length;
         const pts = new Float32Array(4 * m);
         for (let q = 0; q < m; q++) {
@@ -315,20 +386,30 @@ function buildDots(cov, W, H, P) {
 }
 
 /*
- * Trame stochastique : points de même diamètre, densité proportionnelle à la couverture.
- * Disques de Poisson à rayon variable (Bridson) : la distance minimale entre points vaut K·d/√couverture,
- * de sorte que le nombre de points par unité de surface suit la tonalité (bruit bleu, sans alignement).
+ * Trame stochastique : points de même diamètre, densité réglée pour que la surface encrée suive la tonalité.
+ * Disques de Poisson à rayon variable (Bridson) : la distance minimale entre points vaut 0,7·d/√x, où x est la
+ * densité réduite (nombre de points × aire d'un point par unité de surface) nécessaire pour obtenir la
+ * couverture visée. Aux tons clairs x = couverture ; aux tons sombres les points se recouvrent, donc on en
+ * ajoute (table mesurée, cf. stochasticDensity) pour que le noir reste noir.
  * P : { dot (px, diamètre), cut (couverture minimale 0..1), seed, maxPoints }
  * Retour : Float32Array [x, y, r, …]
  */
+const DENSITY_LUT = [[0, 0], [0.3, 0.3], [0.5, 0.5], [0.7, 0.73], [0.8, 0.9], [0.9, 1.15], [0.955, 1.36], [0.97, 1.55], [1, 1.55]];
+function stochasticDensity(c) {                      // couverture visée (0..1) → densité réduite x
+  for (let i = 1; i < DENSITY_LUT.length; i++) {
+    const [u1, x1] = DENSITY_LUT[i];
+    if (c <= u1) { const [u0, x0] = DENSITY_LUT[i - 1]; return u1 === u0 ? x1 : x0 + (x1 - x0) * (c - u0) / (u1 - u0); }
+  }
+  return DENSITY_LUT[DENSITY_LUT.length - 1][1];
+}
 function stochasticDots(cov, W, H, P) {
   const d = P.dot, K = 0.7, cut = Math.max(P.cut, 0.005), rnd = mulberry32(P.seed | 0);
-  const maxN = P.maxPoints || 400000, rmin = d * K, cs = rmin / Math.SQRT2;
+  const maxN = P.maxPoints || 800000, rmin = d * K / Math.sqrt(stochasticDensity(1)), cs = rmin / Math.SQRT2;
   const gw = Math.ceil(W / cs) + 1, gh = Math.ceil(H / cs) + 1;
   const grid = new Int32Array(gw * gh).fill(-1);     // un point au plus par cellule (diagonale = rmin)
   const xs = [], ys = [], act = [];
   const dens = (x, y) => Math.min(1, sampleBilinear(cov, W, H, x, y));
-  const rad = c => rmin / Math.sqrt(c);
+  const rad = c => d * K / Math.sqrt(stochasticDensity(c));
   const free = (x, y, r) => {
     const gx = (x / cs) | 0, gy = (y / cs) | 0, R = Math.ceil(r / cs), r2 = r * r;
     for (let j = Math.max(0, gy - R); j <= Math.min(gh - 1, gy + R); j++) {
@@ -383,23 +464,37 @@ function hatchCoverages(c, n, amax) {
   return a;
 }
 
-// Angles (relatifs) des passes : 2 → 0/90, 3 → 0/60/120, 4 → 0/90/45/135 (les plus contrastés d'abord).
+// Angles (relatifs) des passes : répartis sur 180°, chacun le plus éloigné possible des précédents
+// (2 → 0/90, 3 → 0/60/120, 4 → 0/90/45/135, …) : les passes les plus contrastées viennent en premier.
 function hatchAngles(n) {
-  const order = n === 4 ? [0, 2, 1, 3] : [0, 1, 2, 3].slice(0, n);
-  return order.map(i => i * 180 / n);
+  const step = 180 / n, chosen = [0];
+  while (chosen.length < n) {
+    let best = -1, bestD = -1;
+    for (let i = 1; i < n; i++) {
+      if (chosen.includes(i)) continue;
+      const dmin = Math.min(...chosen.map(j => Math.min(Math.abs(i - j), n - Math.abs(i - j))));
+      if (dmin > bestD) { bestD = dmin; best = i; }
+    }
+    chosen.push(best);
+  }
+  return chosen.map(i => i * step);
 }
 
 /*
- * P : { spacing, angle(deg), passes, amax (couverture max d'une passe, 0..1), cut (px), step, smooth, tol }
+ * Hachures : tous les traits ont la même épaisseur. La tonalité est rendue par le nombre de passes et, au sein
+ * d'une passe, par la proportion de lignes tracées : la ligne k n'existe que là où la part de lignes demandée
+ * dépasse son seuil θₖ (suite de Weyl, équirépartie), ce qui donne une montée progressive sans changer d'épaisseur.
+ * P : { spacing, angle(deg), passes, width (px), minRun (px), step, smooth, tol }
  * Retour : rubans [{ k, layer, pts }] de toutes les passes.
  */
 function buildHatch(cov, W, H, P) {
-  const out = [], n = P.passes, LUT = 1024;
+  const out = [], n = P.passes, LUT = 1024, amax = clamp(P.width / P.spacing, 0.01, 1);
   hatchAngles(n).forEach((a, layer) => {
     const lut = new Float32Array(LUT + 1);
-    for (let q = 0; q <= LUT; q++) lut[q] = hatchCoverages(q / LUT, n, P.amax)[layer] * P.spacing;
-    const mapW = c => lut[Math.round(c * LUT)];
-    for (const r of buildRibbons(cov, W, H, { ...P, angle: P.angle + a, mapW })) { r.layer = layer; out.push(r); }
+    for (let q = 0; q <= LUT; q++) lut[q] = hatchCoverages(q / LUT, n, amax)[layer] / amax;   // part de lignes présentes
+    const off = layer * 0.381966;
+    const mapW = (c, k) => lut[Math.round(c * LUT)] > (((k * 0.6180339887 + off) % 1) + 1) % 1 ? P.width : 0;
+    for (const r of buildRibbons(cov, W, H, { ...P, angle: P.angle + a, wmax: P.width, cut: 0, mapW })) { r.layer = layer; out.push(r); }
   });
   return out;
 }
@@ -427,8 +522,7 @@ function setImageFromCanvas(c) {
   acc = 0;
   for (let i = 255; i >= 0; i--) { acc += hist[i]; if (acc >= total * 0.01) { hi = i / 255; break; } }
   if (hi - lo < 0.05) { lo = 0; hi = 1; }
-  const sp = Math.max(3, Math.round(Math.max(W, H) / 220));
-  ui.spacing.set(sp);
+  imageRanges();
   schedule();
 }
 
@@ -471,10 +565,11 @@ const I18N = {
     layout:'Disposition des points', lay_square:'Carrée', lay_hex:'En quinconce',
     angle:'Angle', spacing:'Espacement', wmin:'Épaisseur min', wmax:'Épaisseur max', cut:'Seuil de coupure',
     wmin_dots:'Diamètre min', wmax_dots:'Diamètre max', cut_dots:'Diamètre min visible',
-    wmax_hatch:'Épaisseur max par passe', cut_stochastic:'Seuil de densité',
+    wmax_hatch:'Épaisseur du trait', cut_stochastic:'Seuil de densité',
     passes:'Nombre de passes', dot:'Diamètre des points', seed:'Graine aléatoire',
     contrast:'Contraste', bright:'Luminosité', gamma:'Courbe de réponse (γ)', detail:'Lissage du détail',
-    far:'Simuler la distance', scale:'Résolution PNG' },
+    far:'Simuler la distance', scale:'Résolution PNG',
+    settings:'Réglages', to_light:'Passer en mode clair', to_dark:'Passer en mode sombre' },
   en: { load:'Load an image…', invert:'Invert (light → thick)', auto:'Auto-normalize',
     phys:'Faithful tones (display gamma)', mm:'SVG print width (mm)',
     mmhint:'Physical size of the SVG file for printing. Empty = size in pixels.',
@@ -485,10 +580,11 @@ const I18N = {
     layout:'Dot layout', lay_square:'Square', lay_hex:'Staggered',
     angle:'Angle', spacing:'Spacing', wmin:'Min thickness', wmax:'Max thickness', cut:'Cut-off threshold',
     wmin_dots:'Min diameter', wmax_dots:'Max diameter', cut_dots:'Min visible diameter',
-    wmax_hatch:'Max thickness per pass', cut_stochastic:'Density threshold',
+    wmax_hatch:'Line thickness', cut_stochastic:'Density threshold',
     passes:'Number of passes', dot:'Dot diameter', seed:'Random seed',
     contrast:'Contrast', bright:'Brightness', gamma:'Response curve (γ)', detail:'Detail smoothing',
-    far:'Simulate distance', scale:'PNG resolution' },
+    far:'Simulate distance', scale:'PNG resolution',
+    settings:'Settings', to_light:'Switch to light mode', to_dark:'Switch to dark mode' },
 };
 let lang = 'fr';
 try { if (localStorage.getItem('stria-lang') === 'en') lang = 'en'; } catch (e) {}
@@ -498,49 +594,79 @@ const sliderRefresh = [];
 const ui = {};
 let style = 'lines';
 const $ = id => document.getElementById(id);
-const sliderRows = [];
 const unitPct = () => style === 'stochastic' ? ' %' : ' ' + T('sp');
-function slider(host, id, min, max, step, val, fmt, styles) {
+// Curseur. `log` : échelle logarithmique (utile quand l'amplitude couvre un ordre de grandeur, comme les espacements).
+function slider(host, id, min, max, step, val, fmt, styles, log) {
   const row = document.createElement('div'); row.className = 'row';
   row.innerHTML = `<label><span></span><b></b></label><input type="range">`;
   const inp = row.querySelector('input'), out = row.querySelector('b'), lab = row.querySelector('span');
-  Object.assign(inp, { min, max, step, value: val });
-  const upd = () => { out.textContent = fmt ? fmt(+inp.value) : inp.value; };
+  let a = min, b = max;
+  const toPos = v => (log ? 1000 * Math.log(v / a) / Math.log(b / a) : v);
+  const get = () => (log ? Math.round(a * Math.pow(b / a, +inp.value / 1000) * 10) / 10 : +inp.value);
+  Object.assign(inp, log ? { min: 0, max: 1000, step: 1 } : { min, max, step });
+  inp.value = toPos(val);
+  const upd = () => { out.textContent = fmt ? fmt(get()) : get(); };
   const labelKey = () => (I18N[lang][id + '_' + style] ? id + '_' + style : id);
   const refresh = () => { lab.textContent = T(labelKey()); row.hidden = !!styles && !styles.includes(style); upd(); };
   sliderRefresh.push(refresh);
   inp.addEventListener('input', () => { upd(); schedule(); });
   host.appendChild(row);
-  ui[id] = { get: () => +inp.value, set: v => { inp.value = v; upd(); } };
+  ui[id] = {
+    get, set: v => { inp.value = toPos(clamp(v, a, b)); upd(); },
+    setRange: (lo2, hi2) => {                       // change l'amplitude en gardant, si possible, la valeur courante
+      const cur = get(); a = lo2; b = hi2;
+      if (!log) { inp.min = lo2; inp.max = hi2; }
+      inp.value = toPos(clamp(cur, a, b)); upd();
+    },
+  };
 }
 const LINES = 'lines', DOTS = 'dots', STO = 'stochastic', HATCH = 'hatch';
 const s1 = document.getElementById('sliders'), s2 = document.getElementById('sliders2');
 slider(s1, 'angle', 0, 179, 1, 45, v => v + '°', [LINES, DOTS, HATCH]);
-slider(s1, 'spacing', 2, 60, 0.5, 8, v => v + ' px', [LINES, DOTS, HATCH]);
-slider(s1, 'passes', 2, 4, 1, 3, v => v, [HATCH]);
-slider(s1, 'dot', 1, 10, 0.1, 2.5, v => v.toFixed(1) + ' px', [STO]);
+slider(s1, 'spacing', 1.5, 48, 0.5, 5.5, v => v.toFixed(1) + ' px', [LINES, DOTS, HATCH], true);
+slider(s1, 'passes', 2, 6, 1, 4, v => v, [HATCH]);
+slider(s1, 'dot', 1.2, 12, 0.1, 4, v => v.toFixed(1) + ' px', [STO], true);
 slider(s1, 'seed', 1, 99, 1, 1, v => v, [STO]);
 slider(s1, 'wmin', 0, 50, 0.5, 2, v => v + ' ' + T('sp'), [LINES, DOTS]);
-slider(s1, 'wmax', 20, 150, 1, 95, v => v + ' ' + T('sp'), [LINES, DOTS, HATCH]);
-slider(s1, 'cut', 0, 30, 0.5, 0, v => v + unitPct());
-slider(s1, 'contrast', 0.2, 3, 0.05, 1, v => v.toFixed(2));
+slider(s1, 'wmax', 30, 130, 1, 95, v => v + ' ' + T('sp'), [LINES, DOTS, HATCH]);
+slider(s1, 'cut', 0, 30, 0.5, 0, v => v + unitPct(), [LINES, DOTS, STO]);
+slider(s1, 'contrast', 0.3, 2.5, 0.05, 1, v => v.toFixed(2));
 slider(s1, 'bright', -0.5, 0.5, 0.01, 0, v => v.toFixed(2));
-slider(s1, 'gamma', 0.3, 3, 0.05, 1, v => v.toFixed(2));
-slider(s1, 'detail', 0, 150, 5, 30, v => v + ' ' + T('sp'));
-slider(s2, 'far', 0, 12, 0.5, 0, v => v + ' px');
+slider(s1, 'gamma', 0.4, 2.5, 0.05, 1, v => v.toFixed(2));
+slider(s1, 'detail', 0, 100, 5, 30, v => v + ' ' + T('sp'));
+slider(s2, 'far', 0, 16, 0.5, 0, v => v + ' px');
 slider(s2, 'scale', 1, 6, 1, 3, v => '×' + v);
 
-// Réglages par défaut propres à chaque style (appliqués quand on change de style).
+// Amplitudes et réglages par défaut propres à chaque style (appliqués quand on change de style).
+const STYLE_RANGES = {
+  lines: { wmax: [30, 130] },
+  dots: { wmax: [40, 200] },
+  hatch: { wmax: [8, 80] },
+  stochastic: {},
+};
 const STYLE_DEFAULTS = {
   lines: { wmin: 2, wmax: 95, cut: 0, detail: 30 },
   dots: { wmin: 0, wmax: 120, cut: 4, detail: 35 },
-  hatch: { wmax: 55, cut: 1, detail: 30 },
-  stochastic: { cut: 2, detail: 30 },
+  hatch: { wmax: 30, passes: 4, detail: 30 },
+  stochastic: { cut: 2, detail: 25 },
 };
+const SPACING_FACTOR = { lines: 1, dots: 1, stochastic: 1, hatch: 1.4 };   // les hachures aiment un pas plus large
+
+// Amplitude et valeur par défaut des curseurs d'échelle selon la taille de l'image (l'espacement est en pixels).
+function imageRanges() {
+  const L = Math.max(W, H);
+  ui.spacing.setRange(Math.max(1.5, L / 900), L / 25);
+  ui.dot.setRange(Math.max(1.2, L / 1000), L / 100);
+  ui.spacing.set(L / 220 * SPACING_FACTOR[style]);
+  ui.dot.set(L / 300);
+}
 $('style').addEventListener('change', e => {
-  style = e.target.value;
+  const prev = style; style = e.target.value;
+  for (const [k, r] of Object.entries(STYLE_RANGES[style])) ui[k].setRange(r[0], r[1]);
   for (const [k, v] of Object.entries(STYLE_DEFAULTS[style])) ui[k].set(v);
   if (style === 'dots') dotsMaxDefault();
+  $('phys').checked = style !== 'stochastic';   // en stochastique, la tonalité perceptuelle donne un semis plus aéré
+  ui.spacing.set(ui.spacing.get() * SPACING_FACTOR[style] / SPACING_FACTOR[prev]);
   applyLang();
   schedule();
 });
@@ -553,6 +679,7 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(e => { e.textContent = T(e.dataset.i18n); });
   sliderRefresh.forEach(f => f());
   $('layoutRow').hidden = style !== 'dots';
+  if (typeof applyTheme === 'function') applyTheme();
   document.querySelectorAll('#lang button').forEach(b => b.classList.toggle('on', b.dataset.l === lang));
   if (typeof updateStats === 'function') updateStats();
 }
@@ -584,7 +711,7 @@ function generate(cov) {
     case 'stochastic':
       return { polys: [], circles: stochasticDots(cov, W, H, { dot: ui.dot.get(), cut: pct('cut'), seed: ui.seed.get() }) };
     case 'hatch':
-      return { polys: buildHatch(cov, W, H, { ...common, passes: ui.passes.get(), amax: pct('wmax'), cut: p * pct('cut') }), circles: EMPTY };
+      return { polys: buildHatch(cov, W, H, { ...common, smooth: 3, passes: ui.passes.get(), width: p * pct('wmax'), minRun: p }), circles: EMPTY };
     default:
       return { polys: buildRibbons(cov, W, H, { ...common, wmin: p * pct('wmin'), wmax: p * pct('wmax'), cut: p * pct('cut') }), circles: EMPTY };
   }
@@ -634,8 +761,7 @@ function render() {
   const sc = Math.min(1, 2000 / Math.max(W, H)) * Math.min(2, window.devicePixelRatio || 1);
   canvas.width = Math.round(W * sc); canvas.height = Math.round(H * sc);
   drawArt(canvas.getContext('2d'), sc);
-  const bw = main.clientWidth - 40, bh = main.clientHeight - 40, f = Math.min(bw / W, bh / H);
-  canvas.style.width = Math.round(W * f) + 'px'; canvas.style.height = Math.round(H * f) + 'px';
+  fit();
   const far = ui.far.get();
   canvas.style.filter = far > 0 ? `blur(${far}px)` : 'none';
   lastMs = Math.round(performance.now() - t0);
@@ -650,7 +776,37 @@ function updateStats() {
   else { let np = 0; for (const r of art.polys) np += r.pts.length / 2; n = `${art.polys.length} ${T('ribbons')} · ${np} ${T('vertices')}`; }
   $('stats').textContent = `${W}×${H} px · ${n} · ${lastMs} ms`;
 }
-window.addEventListener('resize', schedule);
+// Adapte la taille d'affichage au cadre disponible (sans recalculer la trame).
+function fit() {
+  if (!W) return;
+  const cs = getComputedStyle(main), px = parseFloat(cs.paddingLeft) * 2, py = parseFloat(cs.paddingTop) * 2;
+  const f = Math.min((main.clientWidth - px) / W, (main.clientHeight - py) / H);
+  canvas.style.width = Math.max(1, Math.round(W * f)) + 'px'; canvas.style.height = Math.max(1, Math.round(H * f)) + 'px';
+}
+window.addEventListener('resize', fit);
+if (window.ResizeObserver) new ResizeObserver(fit).observe(main);   // le volet mobile qui se déplie change la place disponible
+
+/* ====================== Thème clair / sombre, volet mobile ====================== */
+
+const mqLight = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : { matches: false };
+const effectiveTheme = () => document.documentElement.dataset.theme || (mqLight.matches ? 'light' : 'dark');
+function applyTheme() {
+  const t = effectiveTheme(), btn = $('theme');
+  btn.dataset.mode = t;
+  btn.title = btn.ariaLabel = T(t === 'light' ? 'to_dark' : 'to_light');
+}
+try { const st = localStorage.getItem('stria-theme'); if (st === 'light' || st === 'dark') document.documentElement.dataset.theme = st; } catch (e) {}
+$('theme').addEventListener('click', () => {
+  const next = effectiveTheme() === 'light' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('stria-theme', next); } catch (e) {}
+  applyTheme();
+});
+if (mqLight.addEventListener) mqLight.addEventListener('change', applyTheme);
+$('toggle').addEventListener('click', () => {
+  const collapsed = $('panel').classList.toggle('collapsed');
+  $('toggle').setAttribute('aria-expanded', String(!collapsed));
+});
 
 /* ====================== Exports ====================== */
 
@@ -716,10 +872,12 @@ window.stria = { sampleBilinear, gaussBlur, smooth1D, simplifyProfile, buildRibb
 
 applyLang();
 setImageFromCanvas(demoImage());
-// Paramètres d'URL (liens de démonstration, captures du README) : ?style=dots|stochastic|hatch&layout=hex
+// Paramètres d'URL (liens de démonstration, captures du README) : ?style=dots|stochastic|hatch&layout=hex&theme=light&panel=open
 {
   const q = new URLSearchParams(location.search);
   if (q.get('layout') === 'hex') $('layout').value = 'hex';
+  if (q.get('theme') === 'light' || q.get('theme') === 'dark') { document.documentElement.dataset.theme = q.get('theme'); applyTheme(); }
+  if (q.get('panel') === 'open') { $('panel').classList.remove('collapsed'); $('toggle').setAttribute('aria-expanded', 'true'); }
   if (STYLE_DEFAULTS[q.get('style')]) { $('style').value = q.get('style'); $('style').dispatchEvent(new Event('change')); }
 }
 if (location.search.includes('test')) selfTest();

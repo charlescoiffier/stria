@@ -10,15 +10,20 @@ const page = pathToFileURL(fileURLToPath(new URL('../index.html', import.meta.ur
 const out = fileURLToPath(new URL('../docs/images/', import.meta.url));
 mkdirSync(out, { recursive: true });
 
+// [nom, paramètres d'URL, taille de fenêtre, facteur d'échelle]. Fenêtre ≥ 500 px : Chrome headless refuse plus étroit.
+const DESKTOP = '1280,880', PHONE = '500,900';
 const shots = [
-  ['stria', ''],
-  ['points', '?style=dots&layout=hex'],
-  ['stochastique', '?style=stochastic'],
-  ['hachures', '?style=hatch'],
+  ['stria', '?theme=dark', DESKTOP, 1],
+  ['points', '?theme=dark&style=dots&layout=hex', DESKTOP, 1],
+  ['stochastique', '?theme=dark&style=stochastic', DESKTOP, 1],
+  ['hachures', '?theme=dark&style=hatch', DESKTOP, 1],
+  ['clair', '?theme=light&style=dots&layout=hex', DESKTOP, 1],
+  ['mobile', '?theme=dark&style=stochastic', PHONE, 1],
+  ['mobile-reglages', '?theme=light&style=hatch&panel=open', PHONE, 1],
 ];
-for (const [name, query] of shots) {
-  execFileSync(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--window-size=1280,880',
-    '--force-device-scale-factor=1', '--virtual-time-budget=6000', `--screenshot=${out}${name}.png`, page + query],
+for (const [name, query, size, scale] of shots) {
+  execFileSync(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--window-size=${size}`,
+    `--force-device-scale-factor=${scale}`, '--virtual-time-budget=6000', `--screenshot=${out}${name}.png`, page + query],
     { stdio: 'ignore' });
   console.log(`docs/images/${name}.png`);
 }
